@@ -108,7 +108,36 @@ Function Manage-PSSessions{
 }
 
 
+Function Get-ADActiveAccounts(){
+    
+    #Get argument string, store in $isActiveUser
+    Param(
+        [parameter(Mandatory=$true)]
+        [String]
+        $isActiveUser
+    )
+    $filter = 'SamAccountName -like "'
+    $filter += $isActiveUser
+    $filter += '"' 
+    $isActive = Get-ADUser -Filter $filter | Select-Object -ExpandProperty Enabled
+    $hasLoggedIn = Get-ADUser -Filter $filter -Properties lastlogon| Select-Object -ExpandProperty lastlogon
 
+    if($isActive -like "True"){
+        Write-Host "User $isActiveUser's account is active"
+    }else{
+        Write-Host "User $isActiveUser's account is inactive"
+    }
+
+    if($hasLoggedIn -like "0"){
+        Write-Host "User $isActiveUser has not yet logged in"
+    }else{
+        Write-Host "User $isActiveUser has logged into their account"
+    }
+
+
+    Write-Host "Press any key to return to main menu..."
+    $choice = $host.UI.RawUI.ReadKey()
+}
 
 
 
@@ -173,7 +202,7 @@ switch($choice)
     '1' {cls; Get-ServerInventory > $null; break}
     '2' {cls; Reboot-DomainComputers; break}
     '3' {cls; Manage-PSSessions; break}
-    '4' {Write-Host "Call -AD User Lookup- function"; break}
+    '4' {cls; Get-ADActiveAccounts($(Read-Host "Please enter the name of the user to query")); break}
     '5' {Write-Host "Call -Import Module- function"; break}
     '6' {Write-Host "Call -Set Constrained Endpoint- function"; break}
     '7' {Write-Host "Call -JPEG Query- function"; break}
