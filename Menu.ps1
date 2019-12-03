@@ -1,6 +1,7 @@
 ﻿#Suppress progress bars to tidy up output
 $Global:ProgressPreference = 'SilentlyContinue'
 
+
 #Display Settings to make the menu look cool
 $host.ui.RawUI.BackgroundColor = "Black"
 $host.UI.RawUI.ForegroundColor = "Cyan"
@@ -10,7 +11,7 @@ $host.UI.RawUI.ForegroundColor = "Cyan"
 #Functions
 Function Get-ServerInventory{
     #Fetch all known hosts, store as list of strings
-    $domainPCS = Get-ADComputer -Filter * | Select-Object -ExpandProperty Name
+    $domainPCS = Get-ADComputer -Filter 'DNSHostName -like "*.loc"' | Select-Object -ExpandProperty Name
 
     #Empty old contents of down list
     Set-Content C:\Temp\down.txt $null
@@ -26,8 +27,12 @@ Function Get-ServerInventory{
             Add-Content C:\Temp\down.txt -Value "`n<p><b>$_</b></p>"
         } else {
             $pcName = $_
+            Start-Sleep 2
+            Clear-Host
+            Write-Host "Querying host $pcName ........        " -NoNewline
             try{$storageQueries += Invoke-Command -ComputerName $pcName -FilePath C:\Temp\QueryStorage+RAM.ps1 -ErrorAction Stop}
             catch {$storageQueries += Invoke-Command -ComputerName $pcName -Credential ASIMPSON12\Administrator -FilePath C:\Temp\QueryStorage+RAM.ps1}
+            Write-Host "[OK]"
         }
     }
 
@@ -63,9 +68,10 @@ Function Reboot-DomainComputers{
     #Get Admin Creds
     $cred = Get-Credential -UserName ASIMPSON12\Administrator -Message "Please enter admin credentials"
 
-    $hosts = Get-ADComputer -Filter 'Name -notlike $myHostname' | Select-Object -ExpandProperty Name
+    $hosts = Get-ADComputer -Filter '(Name -notlike $myHostname) -and (DNSHostName -like "*.loc")' | Select-Object -ExpandProperty Name
     $hosts | % {
         if ((Test-NetConnection $_).PingSucceeded) {
+            Clear-Host
             Write-Host "$_ is up, rebooting..."
             Invoke-Command -ComputerName $_ -ScriptBlock {shutdown -r -t 0} -Credential $cred
             Write-Host "Sent shutdown command, waiting for reboot"
@@ -73,13 +79,33 @@ Function Reboot-DomainComputers{
         }
         while (!(Test-NetConnection $_ -WarningAction SilentlyContinue).PingSucceeded){Start-Sleep -Seconds 1}
         Write-Host "Success: $_ is back up"
+        Start-Sleep 2
     }
     Write-Host "Press any key to return to main menu"
     $null = $host.UI.RawUI.ReadKey()
 }
 
 
+Function Manage-PSSessions{
+    Write-Host "Welcome to the PSSession management utility"
+    $sessionTarget = Read-Host "Please supply the hostname of the computer with which to initiate a session (-ComputerName)"
+    $sessionName = Read-Host "Please supply a name for the session (-Name)"
+    Write-Host "Please supply a credential with which to initiate the connection:"
+    New-PSSession -ComputerName $sessionTarget -Name $sessionName -Credential $(Get-Credential ASIMPSON12\Administrator)
+    Clear-Host
+    Write-Host "Remote Powershell Sessions:"
+    Get-PSSession
+    Write-Host "Press any key to return to menu"
+    $null = $host.UI.RawUI.ReadKey()
+    
+    Clear-Host
+    Write-Host "Exit menu to enter session $sessionName"
+    Start-Sleep 2
+    Clear-Host
 
+    Enter-PSSession -Name $sessionName
+
+}
 
 
 
@@ -107,7 +133,7 @@ while($true){
 cls
 Write-Host "========================================================" 
 Write-Host "||                                                    ||"
-Write-Host "||               WIN500 - Assignment One              ||"
+Write-Host "||                 WIN500 - Assignment                ||"
 Write-Host "||                                                    ||"
 Write-Host "||                                                    ||"
 Write-Host "||       Please Choose From The Following Options:    ||"
@@ -146,7 +172,7 @@ switch($choice)
 {
     '1' {cls; Get-ServerInventory > $null; break}
     '2' {cls; Reboot-DomainComputers; break}
-    '3' {Write-Host "Call -Manage Sessions- function"; break}
+    '3' {cls; Manage-PSSessions; break}
     '4' {Write-Host "Call -AD User Lookup- function"; break}
     '5' {Write-Host "Call -Import Module- function"; break}
     '6' {Write-Host "Call -Set Constrained Endpoint- function"; break}
