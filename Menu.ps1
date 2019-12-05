@@ -157,13 +157,57 @@ Function Import-MyCmdlets(){
     }
 }
 
+Function Find-Jpeg{
+    Write-Host "Connected to $env:COMPUTERNAME"
+    
+    New-Item C:\Temp\picture\ -ErrorAction SilentlyContinue
+
+    Write-Host "Copying .jpg files to folder C:\Temp\picture..."
+    Get-ChildItem *.jpg -Path C:\ -Recurse | Copy-Item -Destination C:\Temp\picture -ErrorAction SilentlyContinue
+    Write-Host "Copying complete"
+}
+
+Function Sort-ADJpeg{
+    $cred = Get-Credential ASIMPSON12\Administrator
+    $myHostname = $env:COMPUTERNAME
+    Get-ADComputer -Filter '(Name -notlike $myHostname) -and (DNSHostName -like "*.loc")' | Select-Object -ExpandProperty Name | % {
+        Invoke-Command -ComputerName $_ -ScriptBlock ${function:Find-Jpeg} -Credential $cred
+    }
+    Write-Host "Press any key to return to main menu..."
+    $choice = $host.UI.RawUI.ReadKey()
+}
+
+Function Get-Hostnames{
+    if (Test-Path C:\temp\hostnames.txt){rm C:\temp\hostnames.txt}
+    New-Item -Path C:\temp\hostnames.txt > $null
+    Get-ADComputer -Filter 'DNSHostName -like "*.loc"' | Select-Object -ExpandProperty Name | % {
+        Add-Content -Path C:\temp\hostnames.txt -Value $_
+    }
+    
+}
+
+Function Set-FirewallStatus{
+    Write-Host "Enabling Domain firewall on $env:COMPUTERNAME..."
+    if($(Get-NetFirewallProfile -Name Domain | Select-Object -ExpandProperty Enabled) -like "True"){
+        Write-Host "Domain firewall is already enabled"
+    }else{
+        try{Set-NetFirewallProfile -Name Domain -Enabled True -ErrorAction Stop; Write-Host "Domain firewall has been enabled successfully"}
+        catch{Write-Host "Unable to set firewall on host $env:HOSTNAME, firewall still set to $(Get-NetFirewallProfile -Name Domain | Select-Object -ExpandProperty Enabled)"}
+    }
 
 
+}
 
 
-
-
-
+Function Get-FirewallStatus{
+    Get-Hostnames
+    $cred = Get-Credential ASIMPSON12\Administrator
+    Get-Content -Path C:\temp\hostnames.txt | % {
+        Invoke-Command -ComputerName $_ -Credential $cred -ScriptBlock ${function:Set-FirewallStatus}
+    }
+    Write-Host "Press any key to return to main menu...."
+    $choice = $host.UI.RawUI.ReadKey()
+}
 
 
 
@@ -223,9 +267,9 @@ switch($choice)
     '4' {cls; Get-ADActiveAccounts($(Read-Host "Please enter the name of the user to query")); break}
     '5' {cls; Invoke-Expression 'C:\Users\asimpson12\assignment\AddUser.ps1'} #-Credential $(Get-Credential ASIMPSON12\Administrator); break}
     '6' {cls; Import-MyCmdlets; break}
-    '7' {Write-Host "Success: restricted endpoint has been configured on WIN10-WS"; $choice = $host.UI.RawUI.ReadKey(); break}
-    '8' {Write-Host "Call -JPEG Query- function"; break}
-    '9' {Write-Host "Call -Firewall- function"; break}
+    '7' {cls; $choice = $host.UI.RawUI.ReadKey(); break}
+    '8' {cls; Sort-ADJpeg; break}
+    '9' {cls; Get-FirewallStatus; break}
     'x' {exit}
 
 }
