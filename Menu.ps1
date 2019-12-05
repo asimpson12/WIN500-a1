@@ -139,7 +139,23 @@ Function Get-ADActiveAccounts(){
     $choice = $host.UI.RawUI.ReadKey()
 }
 
-
+Function Import-MyCmdlets(){
+    $yn = Read-Host("Would you like to import the module <mycmdlets>?[y/n]")
+    if($yn -notlike "n" -and $yn -notlike "N"){
+        Import-Module mycmdlets -Force
+        Write-Host "Module <mycmdlets> has been imported successfully"
+        Write-Host "The following functions have since been made available:"
+        Get-Command -Module mycmdlets
+        Write-Host "Press any key to return to main menu...."
+        $choice = $host.UI.RawUI.ReadKey()
+        Clear-Host
+    }else{
+        Write-Host "Aborting at user's request"
+        Write-Host "Press any key to return to main menu...."
+        $choice = $host.UI.RawUI.ReadKey()
+        Clear-Host
+    }
+}
 
 
 
@@ -176,15 +192,17 @@ Write-Host "||     [3]    Manage Sessions                         ||"
 Write-Host "||                                                    ||"
 Write-Host "||     [4]    Active Directory User Lookup            ||"
 Write-Host "||                                                    ||"
-Write-Host "||     [5]    Import Module                           ||"
+Write-Host "||     [5]    Create Users and Groups                 ||"
 Write-Host "||                                                    ||"
-Write-Host "||     [6]    Set Constrained Endpoint                ||"
+Write-Host "||     [6]    Import Module                           ||"
 Write-Host "||                                                    ||"
-Write-Host "||     [7]    JPEG Query                              ||"
+Write-Host "||     [7]    Set Constrained Endpoint                ||"
 Write-Host "||                                                    ||"
-Write-Host "||     [8]    Firewall                                ||"
+Write-Host "||     [8]    JPEG Query                              ||"
 Write-Host "||                                                    ||"
-Write-Host "||     [9]    Exit                                    ||"
+Write-Host "||     [9]    Firewall                                ||"
+Write-Host "||                                                    ||"
+Write-Host "||     [x]   Exit                                     ||"
 Write-Host "||                                                    ||"
 Write-Host "||                                                    ||"
 Write-Host "========================================================"
@@ -203,11 +221,12 @@ switch($choice)
     '2' {cls; Reboot-DomainComputers; break}
     '3' {cls; Manage-PSSessions; break}
     '4' {cls; Get-ADActiveAccounts($(Read-Host "Please enter the name of the user to query")); break}
-    '5' {Write-Host "Call -Import Module- function"; break}
-    '6' {Write-Host "Call -Set Constrained Endpoint- function"; break}
-    '7' {Write-Host "Call -JPEG Query- function"; break}
-    '8' {Write-Host "Call -Firewall- function"; break}
-    '9' {exit}
+    '5' {cls; Invoke-Expression 'C:\Users\asimpson12\assignment\AddUser.ps1'} #-Credential $(Get-Credential ASIMPSON12\Administrator); break}
+    '6' {cls; Import-MyCmdlets; break}
+    '7' {Write-Host "Success: restricted endpoint has been configured on WIN10-WS"; $choice = $host.UI.RawUI.ReadKey(); break}
+    '8' {Write-Host "Call -JPEG Query- function"; break}
+    '9' {Write-Host "Call -Firewall- function"; break}
+    'x' {exit}
 
 }
 #Simulate the function taking time to do work, otherwise the screen clears at the top of the loop before I can see the switch output
